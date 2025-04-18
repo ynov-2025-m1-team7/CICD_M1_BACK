@@ -31,6 +31,7 @@ jobs:
 
     - name: Build and push Docker image
       run: |
+        mkdir -p secrets
         echo "${{ secrets.DB_PASSWORD_PROD }}" > secrets/db_password
         docker build --build-arg DB_PASSWORD=${{ secrets.DB_PASSWORD_PROD }} -t CICDM1 .
         docker push CICDM1
