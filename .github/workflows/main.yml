@@ -1,12 +1,22 @@
-name: Build and Push Docker Image
+name: Main Branch workflow
 
 on:
-  push:
+  pull_request:
     branches:
       - main
 
 jobs:
+  check_branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check branch
+        if: github.base_ref == 'main' && github.head_ref != 'recette'
+        run: |
+          echo "ERROR: You can only merge to main from recette."
+          exit 1
+
   build:
+    needs: check_branch
     runs-on: ubuntu-latest
 
     steps:
@@ -21,6 +31,6 @@ jobs:
 
     - name: Build and push Docker image
       run: |
-        echo "${{ secrets.DB_PASSWORD }}" > secrets/db_password
-        docker build --build-arg DB_PASSWORD=${{ secrets.DB_PASSWORD }} -t CICDM1 .
+        echo "${{ secrets.DB_PASSWORD_PROD }}" > secrets/db_password
+        docker build --build-arg DB_PASSWORD=${{ secrets.DB_PASSWORD_PROD }} -t CICDM1 .
         docker push CICDM1
