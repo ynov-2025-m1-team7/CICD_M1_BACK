@@ -3,7 +3,7 @@ name: Recette Branch workflow
 on:
   push:
     branches:
-      - recette
+      - dev
 
 jobs:
   build:
@@ -35,4 +35,4 @@ jobs:
     steps:
     - name: refresh webservice
       run: |
-        curl -X POST "${ { secrets.RENDER_HOOK_URL } }"
+        curl -X POST "${{ secrets.RENDER_HOOK_URL }}"
