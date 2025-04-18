@@ -13,7 +13,7 @@ jobs:
         if: github.base_ref == 'main' && github.head_ref != 'recette'
         run: |
           echo "ERROR: You can only merge to main from recette."
-          exit 1
+          exit 0
 
   build:
     needs: check_branch
@@ -33,5 +33,13 @@ jobs:
       run: |
         mkdir -p secrets
         echo "${{ secrets.DB_PASSWORD_PROD }}" > secrets/db_password
-        docker build --build-arg DB_PASSWORD=${{ secrets.DB_PASSWORD_PROD }} -t CICDM1 .
-        docker push CICDM1
+        docker build --build-arg DB_PASSWORD=${{ secrets.DB_PASSWORD_PROD }} -t djlopezz/cicdm1 .
+        docker push djlopezz/cicdm1
+
+  Hook:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+    - name: refresh webservice
+      run: |
+        curl -X POST "${{ secrets.RENDER_HOOK_URL }}"

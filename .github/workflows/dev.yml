@@ -3,13 +3,10 @@ name: Recette Branch workflow
 on:
   push:
     branches:
-      - recette
-    paths-ignore:
-      - '**'
+      - dev
 
 jobs:
   build:
-    if: github.event.before == 'refs/heads/dev'
     runs-on: ubuntu-latest
 
     steps:
@@ -33,7 +30,6 @@ jobs:
         docker push djlopezz/cicdm1
     
   Hook:
-    if: github.event.before == 'refs/heads/dev'
     runs-on: ubuntu-latest
     needs: build
     steps:
