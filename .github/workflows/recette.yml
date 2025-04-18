@@ -28,3 +28,11 @@ jobs:
         echo "${{ secrets.DB_PASSWORD_DEV }}" > secrets/db_password
         docker build --build-arg DB_PASSWORD=${{ secrets.DB_PASSWORD_DEV }} -t djlopezz/cicdm1 .
         docker push djlopezz/cicdm1
+    
+  Hook:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+    - name: refresh webservice
+      run: |
+        curl -X POST "${ { secrets.RENDER_HOOK_URL } }" -H "Content-Type: application/json" -d '{"refresh": true}'
