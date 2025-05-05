@@ -63,8 +63,7 @@ RUN apk update && \
         gcc \
         musl-dev \
         libffi-dev && \
-    pip3 install --no-cache-dir flask && \
-    apk del gcc musl-dev libffi-dev
+    pip3 install --no-cache-dir flask
 
 # Copy the Python API code into the container
 COPY ./sentiment_service.py /app/sentiment_service.py
