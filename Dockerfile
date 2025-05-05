@@ -90,4 +90,5 @@ EXPOSE 8080
 EXPOSE 5000
 
 # What the container should run when it is started.
-ENTRYPOINT ["sh", "-c", "/bin/server & python3 /app/sentiment_service.py"]
+ENTRYPOINT ["sh", "-c", "/bin/server"]
+#  & python3 /app/sentiment_service.py
