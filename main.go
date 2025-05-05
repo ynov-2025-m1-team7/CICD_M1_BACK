@@ -127,7 +127,69 @@ func main() {
 		return c.JSON(fiber.Map{"deleted_count": result.DeletedCount})
 	})
 
-	// Démarrer le serveur
+	app.Post("/upload", func(c *fiber.Ctx) error {
+		// Try to parse as array first
+		var arrayData []bson.M
+		if err := c.BodyParser(&arrayData); err == nil && len(arrayData) > 0 {
+			// Convert to interface slice for InsertMany
+			documents := make([]interface{}, len(arrayData))
+			for i, doc := range arrayData {
+				documents[i] = doc
+			}
+
+			// Insert documents with options to ignore duplicates
+			ctx := context.TODO()
+			opts := options.InsertMany().SetOrdered(false)
+			result, err := mongoClient.Collection.InsertMany(ctx, documents, opts)
+			if err != nil {
+				// Check for duplicate key errors
+				if mongo.IsDuplicateKeyError(err) {
+					return c.Status(fiber.StatusOK).JSON(fiber.Map{
+						"message":        "Data uploaded with some duplicates ignored",
+						"inserted_count": len(result.InsertedIDs),
+						"inserted_ids":   result.InsertedIDs,
+					})
+				}
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"error": "Failed to insert data into database",
+				})
+			}
+
+			return c.JSON(fiber.Map{
+				"message":        "Data uploaded and processed successfully",
+				"inserted_count": len(result.InsertedIDs),
+				"inserted_ids":   result.InsertedIDs,
+			})
+		}
+
+		// If not an array, try as a single document
+		var singleDoc bson.M
+		if err := c.BodyParser(&singleDoc); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Invalid JSON format",
+			})
+		}
+
+		// Insert single document with option to ignore duplicates
+		ctx := context.TODO()
+		opts := options.InsertOne().SetBypassDocumentValidation(true)
+		result, err := mongoClient.Collection.InsertOne(ctx, singleDoc, opts)
+		if err != nil {
+			if mongo.IsDuplicateKeyError(err) {
+				return c.JSON(fiber.Map{
+					"message": "Document already exists, duplicate ignored",
+				})
+			}
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to insert data into database",
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"message":     "Data uploaded and processed successfully",
+			"inserted_id": result.InsertedID,
+		})
+	})
 	if err := app.Listen(":8080"); err != nil {
 		log.Fatal("Erreur lors du démarrage du serveur:", err)
 	}
