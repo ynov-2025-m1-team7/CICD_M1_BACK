@@ -1,8 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"io/ioutil"
 	"log"
+	"net/http"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
@@ -11,16 +15,17 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// MongoClient encapsule le client MongoDB et la collection
 type MongoClient struct {
 	Client     *mongo.Client
 	Collection *mongo.Collection
 }
 
-// Data représente une donnée générique
 type Data bson.M
 
-// InitMongoDB initialise la connexion à MongoDB
+type SentimentResponse struct {
+	Score float64 `json:"score"`
+}
+
 func InitMongoDB(uri, dbName, collectionName string) (*MongoClient, error) {
 	ctx := context.TODO()
 	clientOptions := options.Client().ApplyURI(uri)
@@ -37,10 +42,8 @@ func InitMongoDB(uri, dbName, collectionName string) (*MongoClient, error) {
 }
 
 func main() {
-	// Initialiser Fiber
 	app := fiber.New()
 
-	// Initialiser MongoDB
 	uri := "mongodb+srv://cheikh:aless@cluster0.woq7hfj.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 	mongoClient, err := InitMongoDB(uri, "ci_cd", "test")
 	if err != nil {
@@ -49,148 +52,144 @@ func main() {
 	defer mongoClient.Client.Disconnect(context.TODO())
 	log.Println("Connexion à MongoDB établie !")
 
-	// Route de bienvenue
+	// Welcome route
 	app.Get("/", func(c *fiber.Ctx) error {
-		return c.SendString("Welcome to the Fiber RESTful API!")
+		return c.SendString("API de gestion des feedbacks")
 	})
 
-	// SELECT: Récupérer toutes les données
-	app.Get("/data", func(c *fiber.Ctx) error {
+	// Lister tous les feedbacks
+	app.Get("/feedbacks", func(c *fiber.Ctx) error {
 		ctx := context.TODO()
 		cursor, err := mongoClient.Collection.Find(ctx, bson.D{})
 		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Erreur lors de la récupération des données"})
+			return c.Status(500).JSON(fiber.Map{"error": "Erreur de récupération"})
 		}
 		defer cursor.Close(ctx)
 		var data []Data
 		if err := cursor.All(ctx, &data); err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Erreur lors du décodage des données"})
+			return c.Status(500).JSON(fiber.Map{"error": "Erreur de décodage"})
 		}
 		return c.JSON(data)
 	})
 
-	// ADD: Ajouter une nouvelle donnée
-	app.Post("/data", func(c *fiber.Ctx) error {
+	// Ajouter un feedback
+	app.Post("/feedbacks", func(c *fiber.Ctx) error {
 		var data Data
 		if err := c.BodyParser(&data); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Erreur de parsing des données"})
+			return c.Status(400).JSON(fiber.Map{"error": "Erreur de parsing"})
 		}
 		ctx := context.TODO()
 		result, err := mongoClient.Collection.InsertOne(ctx, data)
 		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Erreur lors de l'ajout des données"})
+			return c.Status(500).JSON(fiber.Map{"error": "Erreur d'insertion"})
 		}
 		return c.JSON(fiber.Map{"inserted_id": result.InsertedID})
 	})
 
-	// UPDATE: Mettre à jour une donnée par ID
-	app.Put("/data/:id", func(c *fiber.Ctx) error {
+	// Mettre à jour un feedback
+	app.Put("/feedbacks/:id", func(c *fiber.Ctx) error {
 		id := c.Params("id")
 		objID, err := primitive.ObjectIDFromHex(id)
 		if err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "ID invalide"})
+			return c.Status(400).JSON(fiber.Map{"error": "ID invalide"})
 		}
 		var data Data
 		if err := c.BodyParser(&data); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Erreur de parsing des données"})
+			return c.Status(400).JSON(fiber.Map{"error": "Erreur de parsing"})
 		}
 		ctx := context.TODO()
-		result, err := mongoClient.Collection.UpdateOne(
-			ctx,
-			bson.M{"_id": objID},
-			bson.M{"$set": data},
-		)
+		result, err := mongoClient.Collection.UpdateOne(ctx, bson.M{"_id": objID}, bson.M{"$set": data})
 		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Erreur lors de la mise à jour"})
+			return c.Status(500).JSON(fiber.Map{"error": "Erreur mise à jour"})
 		}
 		if result.MatchedCount == 0 {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Donnée non trouvée"})
+			return c.Status(404).JSON(fiber.Map{"error": "Donnée non trouvée"})
 		}
 		return c.JSON(fiber.Map{"modified_count": result.ModifiedCount})
 	})
 
-	// DELETE: Supprimer une donnée par ID
-	app.Delete("/data/:id", func(c *fiber.Ctx) error {
+	// Supprimer un feedback
+	app.Delete("/feedbacks/:id", func(c *fiber.Ctx) error {
 		id := c.Params("id")
 		objID, err := primitive.ObjectIDFromHex(id)
 		if err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "ID invalide"})
+			return c.Status(400).JSON(fiber.Map{"error": "ID invalide"})
 		}
 		ctx := context.TODO()
 		result, err := mongoClient.Collection.DeleteOne(ctx, bson.M{"_id": objID})
 		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Erreur lors de la suppression"})
+			return c.Status(500).JSON(fiber.Map{"error": "Erreur suppression"})
 		}
 		if result.DeletedCount == 0 {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Donnée non trouvée"})
+			return c.Status(404).JSON(fiber.Map{"error": "Non trouvé"})
 		}
 		return c.JSON(fiber.Map{"deleted_count": result.DeletedCount})
 	})
 
-	app.Post("/upload", func(c *fiber.Ctx) error {
-		// Try to parse as array first
+	// Upload multiple ou un seul document
+	app.Post("/feedbacks/upload", func(c *fiber.Ctx) error {
 		var arrayData []bson.M
 		if err := c.BodyParser(&arrayData); err == nil && len(arrayData) > 0 {
-			// Convert to interface slice for InsertMany
 			documents := make([]interface{}, len(arrayData))
 			for i, doc := range arrayData {
 				documents[i] = doc
 			}
-
-			// Insert documents with options to ignore duplicates
 			ctx := context.TODO()
 			opts := options.InsertMany().SetOrdered(false)
 			result, err := mongoClient.Collection.InsertMany(ctx, documents, opts)
 			if err != nil {
-				// Check for duplicate key errors
-				if mongo.IsDuplicateKeyError(err) {
-					return c.Status(fiber.StatusOK).JSON(fiber.Map{
-						"message":        "Data uploaded with some duplicates ignored",
-						"inserted_count": len(result.InsertedIDs),
-						"inserted_ids":   result.InsertedIDs,
-					})
-				}
-				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-					"error": "Failed to insert data into database",
-				})
+				return c.Status(500).JSON(fiber.Map{"error": "Erreur insertion multiple"})
 			}
-
-			return c.JSON(fiber.Map{
-				"message":        "Data uploaded and processed successfully",
-				"inserted_count": len(result.InsertedIDs),
-				"inserted_ids":   result.InsertedIDs,
-			})
+			return c.JSON(fiber.Map{"inserted_count": len(result.InsertedIDs)})
 		}
 
-		// If not an array, try as a single document
 		var singleDoc bson.M
 		if err := c.BodyParser(&singleDoc); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "Invalid JSON format",
-			})
+			return c.Status(400).JSON(fiber.Map{"error": "Format JSON invalide"})
 		}
-
-		// Insert single document with option to ignore duplicates
 		ctx := context.TODO()
-		opts := options.InsertOne().SetBypassDocumentValidation(true)
-		result, err := mongoClient.Collection.InsertOne(ctx, singleDoc, opts)
+		result, err := mongoClient.Collection.InsertOne(ctx, singleDoc)
 		if err != nil {
-			if mongo.IsDuplicateKeyError(err) {
-				return c.JSON(fiber.Map{
-					"message": "Document already exists, duplicate ignored",
-				})
-			}
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "Failed to insert data into database",
-			})
+			return c.Status(500).JSON(fiber.Map{"error": "Erreur insertion simple"})
+		}
+		return c.JSON(fiber.Map{"inserted_id": result.InsertedID})
+	})
+
+	// Analyse de sentiment d’un feedback
+	app.Post("/feedbacks/:id/analyze", func(c *fiber.Ctx) error {
+		id := c.Params("id")
+		ctx := context.TODO()
+
+		var doc bson.M
+		err := mongoClient.Collection.FindOne(ctx, bson.M{"id": id}).Decode(&doc)
+		if err != nil {
+			return c.Status(404).JSON(fiber.Map{"error": "Feedback non trouvé"})
 		}
 
-		return c.JSON(fiber.Map{
-			"message":     "Data uploaded and processed successfully",
-			"inserted_id": result.InsertedID,
-		})
+		text, ok := doc["text"].(string)
+		if !ok {
+			return c.Status(400).JSON(fiber.Map{"error": "Champ texte invalide ou absent"})
+		}
+
+		payload, _ := json.Marshal(map[string]string{"text": text})
+		resp, err := http.Post("http://localhost:5000/analyze", "application/json", bytes.NewBuffer(payload))
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Erreur appel service sentiment"})
+		}
+		defer resp.Body.Close()
+		body, _ := ioutil.ReadAll(resp.Body)
+		var sentiment SentimentResponse
+		json.Unmarshal(body, &sentiment)
+
+		_, err = mongoClient.Collection.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"score": sentiment.Score}})
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Erreur mise à jour score"})
+		}
+
+		return c.JSON(fiber.Map{"id": id, "score": sentiment.Score})
 	})
+
 	if err := app.Listen(":8080"); err != nil {
-		log.Fatal("Erreur lors du démarrage du serveur:", err)
+		log.Fatal("Erreur démarrage serveur:", err)
 	}
 }
