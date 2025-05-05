@@ -305,6 +305,46 @@ func main() {
 		return c.JSON(fiber.Map{"updated_count": updated})
 	})
 
+	// @Summary Average Score
+	// @Description Calculate the average score of all feedbacks in the database.
+	// @Tags feedbacks
+	// @Accept json
+	// @Produce json
+	// @Success 200 {object} map[string]float64 "Average score"
+	// @Router /feedbacks/average-score [get]
+	app.Get("/feedbacks/average-score", func(c *fiber.Ctx) error {
+		ctx := context.TODO()
+
+		// MongoDB aggregation pipeline to calculate the average score
+		pipeline := mongo.Pipeline{
+			{
+				{"$group", bson.D{{"_id", nil}, {"averageScore", bson.D{{"$avg", "$score"}}}}},
+			},
+		}
+
+		cursor, err := mongoClient.Collection.Aggregate(ctx, pipeline)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Erreur de calcul de la moyenne"})
+		}
+		defer cursor.Close(ctx)
+
+		var result []bson.M
+		if err := cursor.All(ctx, &result); err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Erreur de décodage des résultats"})
+		}
+
+		if len(result) == 0 {
+			return c.JSON(fiber.Map{"average_score": 0})
+		}
+
+		averageScore, ok := result[0]["averageScore"].(float64)
+		if !ok {
+			return c.Status(500).JSON(fiber.Map{"error": "Erreur de conversion de la moyenne"})
+		}
+
+		return c.JSON(fiber.Map{"average_score": averageScore})
+	})
+
 	// Démarrage du serveur Fiber
 	if err := app.Listen(":8080"); err != nil {
 		log.Fatal("Erreur démarrage serveur:", err)
