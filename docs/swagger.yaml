@@ -1,0 +1,180 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "title": "Feedback Management API",
+        "description": "API for managing feedbacks, including CRUD operations and sentiment analysis.",
+        "version": "1.0.0",
+        "contact": {
+            "name": "API Support",
+            "email": "support@example.com"
+        }
+    },
+    "paths": {
+        "/": {
+            "get": {
+                "summary": "Root Endpoint",
+                "description": "Returns a welcome message for the API.",
+                "responses": {
+                    "200": {
+                        "description": "Successful response",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/feedbacks": {
+            "get": {
+                "summary": "List Feedbacks",
+                "description": "Retrieve all feedbacks from the database.",
+                "responses": {
+                    "200": {
+                        "description": "Successful response",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "Add Feedback",
+                "description": "Add a new feedback to the database.",
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Feedback added successfully",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/feedbacks/{id}": {
+            "put": {
+                "summary": "Update Feedback",
+                "description": "Update an existing feedback by ID.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Feedback updated successfully",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "Delete Feedback",
+                "description": "Delete a feedback by ID.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Feedback deleted successfully",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/feedbacks/upload": {
+            "post": {
+                "summary": "Upload Feedbacks",
+                "description": "Upload multiple or a single feedback.",
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Feedback(s) uploaded successfully",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/feedbacks/{id}/analyze": {
+            "post": {
+                "summary": "Analyze Feedback",
+                "description": "Analyze the sentiment of a single feedback by ID.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Sentiment analysis result",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/feedbacks/analyze-all": {
+            "post": {
+                "summary": "Analyze All Feedbacks",
+                "description": "Perform sentiment analysis on all feedbacks.",
+                "responses": {
+                    "200": {
+                        "description": "Number of feedbacks analyzed successfully",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

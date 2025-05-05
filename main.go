@@ -8,13 +8,21 @@ import (
 	"log"
 	"net/http"
 
+	_ "cicd_m1_back/docs"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+
+	// Import the generated Swagger docs
+
+	swagger "github.com/arsmn/fiber-swagger/v2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+// fiber-swagger middleware
 
 type MongoClient struct {
 	Client     *mongo.Client
@@ -44,6 +52,7 @@ func InitMongoDB(uri, dbName, collectionName string) (*MongoClient, error) {
 
 func main() {
 	app := fiber.New()
+	app.Get("/swagger/*", swagger.HandlerDefault)
 
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: "*",                           // Autorise toutes les origines
