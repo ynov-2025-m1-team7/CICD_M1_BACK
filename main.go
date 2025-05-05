@@ -287,7 +287,7 @@ func main() {
 			}
 
 			payload, _ := json.Marshal(map[string]string{"text": text})
-			resp, err := http.Post("http://localhost:5000/analyze", "application/json", bytes.NewBuffer(payload))
+			resp, err := http.Post("https://cicd-m1-back-sent.onrender.com/analyze", "application/json", bytes.NewBuffer(payload))
 			if err != nil {
 				continue
 			}
