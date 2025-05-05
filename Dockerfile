@@ -55,6 +55,22 @@ RUN --mount=type=cache,target=/var/cache/apk \
         && \
         update-ca-certificates
 
+# Install Python runtime for the Python API
+RUN apk update && \
+    apk add --no-cache \
+        python3 \
+        py3-pip \
+        gcc \
+        musl-dev \
+        libffi-dev && \
+    pip3 install --no-cache-dir flask
+
+# Copy the Python API code into the container
+COPY ./sentiment_service.py /app/sentiment_service.py
+
+# Install Python API dependencies
+RUN pip3 install --no-cache-dir flask
+
 # Create a non-privileged user that the app will run under.
 # See https://docs.docker.com/go/dockerfile-user-best-practices/
 ARG UID=10001
@@ -74,5 +90,8 @@ COPY --from=build /bin/server /bin/
 # Expose the port that the application listens on.
 EXPOSE 8080
 
+# Expose the port for the Python API
+EXPOSE 5000
+
 # What the container should run when it is started.
-ENTRYPOINT [ "/bin/server" ]
+ENTRYPOINT ["sh", "-c", "/bin/server & python3 /app/sentiment_service.py"]
