@@ -59,7 +59,12 @@ RUN --mount=type=cache,target=/var/cache/apk \
 RUN apk update && \
     apk add --no-cache \
         python3 \
-        py3-pip
+        py3-pip \
+        gcc \
+        musl-dev \
+        libffi-dev && \
+    pip3 install --no-cache-dir flask && \
+    apk del gcc musl-dev libffi-dev
 
 # Copy the Python API code into the container
 COPY ./sentiment_service.py /app/sentiment_service.py
