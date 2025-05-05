@@ -56,12 +56,10 @@ RUN --mount=type=cache,target=/var/cache/apk \
         update-ca-certificates
 
 # Install Python runtime for the Python API
-RUN --mount=type=cache,target=/var/cache/apk \
-    apk --update add \
+RUN apk update && \
+    apk add --no-cache \
         python3 \
-        py3-pip \
-        && \
-    python3 -m ensurepip
+        py3-pip
 
 # Copy the Python API code into the container
 COPY ./sentiment_service.py /app/sentiment_service.py
