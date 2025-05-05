@@ -67,11 +67,24 @@ func main() {
 	defer mongoClient.Client.Disconnect(context.TODO())
 	log.Println("Connexion à MongoDB établie !")
 
+	// @Summary Root Endpoint
+	// @Description Returns a welcome message for the API.
+	// @Tags root
+	// @Accept json
+	// @Produce json
+	// @Success 200 {string} string "Welcome message"
+	// @Router / [get]
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("API de gestion des feedbacks")
 	})
 
-	// GET /feedbacks - Lister tous les feedbacks
+	// @Summary List Feedbacks
+	// @Description Retrieve all feedbacks from the database.
+	// @Tags feedbacks
+	// @Accept json
+	// @Produce json
+	// @Success 200 {array} map[string]interface{}
+	// @Router /feedbacks [get]
 	app.Get("/feedbacks", func(c *fiber.Ctx) error {
 		ctx := context.TODO()
 		cursor, err := mongoClient.Collection.Find(ctx, bson.D{})
@@ -87,7 +100,14 @@ func main() {
 		return c.JSON(data)
 	})
 
-	// POST /feedbacks - Ajouter un feedback
+	// @Summary Add Feedback
+	// @Description Add a new feedback to the database.
+	// @Tags feedbacks
+	// @Accept json
+	// @Produce json
+	// @Param feedback body map[string]interface{} true "Feedback data"
+	// @Success 200 {object} map[string]interface{}
+	// @Router /feedbacks [post]
 	app.Post("/feedbacks", func(c *fiber.Ctx) error {
 		var data Data
 		if err := c.BodyParser(&data); err != nil {
@@ -101,7 +121,15 @@ func main() {
 		return c.JSON(fiber.Map{"inserted_id": result.InsertedID})
 	})
 
-	// PUT /feedbacks/:id - Mettre à jour un feedback
+	// @Summary Update Feedback
+	// @Description Update an existing feedback by ID.
+	// @Tags feedbacks
+	// @Accept json
+	// @Produce json
+	// @Param id path string true "Feedback ID"
+	// @Param feedback body map[string]interface{} true "Updated feedback data"
+	// @Success 200 {object} map[string]interface{}
+	// @Router /feedbacks/{id} [put]
 	app.Put("/feedbacks/:id", func(c *fiber.Ctx) error {
 		id := c.Params("id")
 		objID, err := primitive.ObjectIDFromHex(id)
@@ -123,7 +151,14 @@ func main() {
 		return c.JSON(fiber.Map{"modified_count": result.ModifiedCount})
 	})
 
-	// DELETE /feedbacks/:id - Supprimer un feedback
+	// @Summary Delete Feedback
+	// @Description Delete a feedback by ID.
+	// @Tags feedbacks
+	// @Accept json
+	// @Produce json
+	// @Param id path string true "Feedback ID"
+	// @Success 200 {object} map[string]interface{}
+	// @Router /feedbacks/{id} [delete]
 	app.Delete("/feedbacks/:id", func(c *fiber.Ctx) error {
 		id := c.Params("id")
 		objID, err := primitive.ObjectIDFromHex(id)
@@ -141,7 +176,14 @@ func main() {
 		return c.JSON(fiber.Map{"deleted_count": result.DeletedCount})
 	})
 
-	// POST /feedbacks/upload - Upload multiple ou un seul feedback
+	// @Summary Upload Feedbacks
+	// @Description Upload multiple or a single feedback.
+	// @Tags feedbacks
+	// @Accept json
+	// @Produce json
+	// @Param feedbacks body []map[string]interface{} true "Array of feedbacks"
+	// @Success 200 {object} map[string]interface{}
+	// @Router /feedbacks/upload [post]
 	app.Post("/feedbacks/upload", func(c *fiber.Ctx) error {
 		var arrayData []bson.M
 		if err := c.BodyParser(&arrayData); err == nil && len(arrayData) > 0 {
@@ -170,7 +212,14 @@ func main() {
 		return c.JSON(fiber.Map{"inserted_id": result.InsertedID})
 	})
 
-	// POST /feedbacks/:id/analyze - Analyse d’un seul feedback
+	// @Summary Analyze Feedback
+	// @Description Analyze the sentiment of a single feedback by ID.
+	// @Tags feedbacks
+	// @Accept json
+	// @Produce json
+	// @Param id path string true "Feedback ID"
+	// @Success 200 {object} map[string]interface{}
+	// @Router /feedbacks/{id}/analyze [post]
 	app.Post("/feedbacks/:id/analyze", func(c *fiber.Ctx) error {
 		id := c.Params("id")
 		ctx := context.TODO()
@@ -204,7 +253,13 @@ func main() {
 		return c.JSON(fiber.Map{"id": id, "score": sentiment.Score})
 	})
 
-	// ✅ POST /feedbacks/analyze-all - Analyse automatique de tous les feedbacks
+	// @Summary Analyze All Feedbacks
+	// @Description Perform sentiment analysis on all feedbacks.
+	// @Tags feedbacks
+	// @Accept json
+	// @Produce json
+	// @Success 200 {object} map[string]interface{}
+	// @Router /feedbacks/analyze-all [post]
 	app.Post("/feedbacks/analyze-all", func(c *fiber.Ctx) error {
 		ctx := context.TODO()
 
