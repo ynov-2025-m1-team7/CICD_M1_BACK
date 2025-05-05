@@ -12,6 +12,6 @@ func main() {
 		return c.SendString("Welcome to the Fiber RESTful API!")
 	})
 
-	// Start the server
+	// Start the server hehe
 	app.Listen(":8080")
 }
