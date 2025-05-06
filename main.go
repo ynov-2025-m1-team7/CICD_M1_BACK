@@ -10,10 +10,12 @@ import (
 
 	_ "cicd_m1_back/docs"
 
+	"github.com/getsentry/sentry-go"
+	sentryfiber "github.com/getsentry/sentry-go/fiber"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 
-	// Import the generated Swagger docs
+	// Import the generated Swagger docss
 
 	swagger "github.com/arsmn/fiber-swagger/v2"
 	"go.mongodb.org/mongo-driver/bson"
@@ -21,8 +23,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
-
-// fiber-swagger middleware
 
 type MongoClient struct {
 	Client     *mongo.Client
@@ -343,6 +343,22 @@ func main() {
 		}
 
 		return c.JSON(fiber.Map{"average_score": averageScore})
+	})
+
+	// Add Sentry to all routes
+	app.Use(sentryfiber.New(sentryfiber.Options{}))
+
+	// New route to generate an error
+	// @Summary Generate Error
+	// @Description This route generates a test error for Sentry.
+	// @Tags errors
+	// @Accept json
+	// @Produce json
+	// @Success 500 {object} map[string]string "Error message"
+	// @Router /generate-error [get]
+	app.Get("/generate-error", func(c *fiber.Ctx) error {
+		sentry.CaptureMessage("This is a test error captured by Sentry")
+		return c.Status(500).JSON(fiber.Map{"error": "This is a test error"})
 	})
 
 	// Démarrage du serveur Fiber

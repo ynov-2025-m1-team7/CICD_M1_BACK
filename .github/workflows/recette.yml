@@ -31,10 +31,27 @@ jobs:
         echo "${{ secrets.DB_PASSWORD_DEV }}" > secrets/db_password
         docker build --build-arg DB_PASSWORD=${{ secrets.DB_PASSWORD_DEV }} -t djlopezz/cicdm1 .
         docker push djlopezz/cicdm1
+
+  website-ready:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+    - name: Wait for website to be ready
+      run: |
+        for i in {1..30}; do
+          if curl -sSf "https://cicdm1.onrender.com" > /dev/null; then
+            echo "Website is ready!";
+            exit 0;
+          fi;
+          echo "Waiting for website...";
+          sleep 5;
+        done;
+        echo "Website did not become ready in time.";
+        exit 1;
   
   load-test:
     runs-on: ubuntu-latest
-    needs: [build]
+    needs: [Hook, website-ready]
 
     steps:
     - name: Checkout code
@@ -48,7 +65,7 @@ jobs:
         -d '{"event_type": "load-test-trigger"}'
 
     - name: Upload summary.json
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: load-test-summary
         path: summary.json
@@ -61,3 +78,39 @@ jobs:
     - name: refresh webservice
       run: |
         curl -X POST "${{ secrets.RENDER_HOOK_URL }}"
+
+  test:
+    runs-on: ubuntu-latest
+    needs: [load-test]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: 1.23
+
+    - name: Wait for website to be ready
+      run: |
+        for i in {1..60}; do
+          if curl -sSf "https://cicdm1.onrender.com" > /dev/null; then
+            echo "Website is ready!";
+            exit 0;
+          fi;
+          echo "Waiting for website...";
+          sleep 5;
+        done;
+        echo "Website did not become ready in time.";
+        exit 1;
+
+    - name: Run tests
+      run: |
+        go test ./... -v > test-results.txt
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: test-results.json
