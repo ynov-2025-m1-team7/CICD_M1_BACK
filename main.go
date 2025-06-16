@@ -362,6 +362,22 @@ func main() {
 		return c.JSON(fiber.Map{"average_score": averageScore})
 	})
 
+	// Add Sentry to all routes
+	app.Use(sentryfiber.New(sentryfiber.Options{}))
+
+	// New route to generate an error
+	// @Summary Generate Error
+	// @Description This route generates a test error for Sentry.
+	// @Tags errors
+	// @Accept json
+	// @Produce json
+	// @Success 500 {object} map[string]string "Error message"
+	// @Router /generate-error [get]
+	app.Get("/generate-error", func(c *fiber.Ctx) error {
+		sentry.CaptureMessage("This is a test error captured by Sentry")
+		return c.Status(500).JSON(fiber.Map{"error": "This is a test error"})
+	})
+
 	// Démarrage du serveur Fiber
 	if err := app.Listen(":8080"); err != nil {
 		log.Fatal("Erreur démarrage serveur:", err)
