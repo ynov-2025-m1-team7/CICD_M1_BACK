@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"time"
 
 	_ "cicd_m1_back/docs"
 
@@ -20,6 +21,9 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+
+	"github.com/getsentry/sentry-go"
+	sentryfiber "github.com/getsentry/sentry-go/fiber"
 )
 
 // fiber-swagger middleware
@@ -66,6 +70,19 @@ func main() {
 	}
 	defer mongoClient.Client.Disconnect(context.TODO())
 	log.Println("Connexion à MongoDB établie !")
+
+	// Initialize Sentry
+	err = sentry.Init(sentry.ClientOptions{
+		Dsn:              "https://8b79f7139ced081e4464099eceef1d11@o4509507230629888.ingest.de.sentry.io/4509507244523600",
+		TracesSampleRate: 1.0,
+	})
+	if err != nil {
+		log.Fatalf("sentry.Init: %s", err)
+	}
+	defer sentry.Flush(2 * time.Second)
+
+	// Add Sentry middleware to Fiber
+	app.Use(sentryfiber.New(sentryfiber.Options{}))
 
 	// @Summary Root Endpoint
 	// @Description Returns a welcome message for the API.
@@ -303,6 +320,62 @@ func main() {
 		}
 
 		return c.JSON(fiber.Map{"updated_count": updated})
+	})
+
+	// @Summary Average Score
+	// @Description Calculate the average score of all feedbacks in the database.
+	// @Tags feedbacks
+	// @Accept json
+	// @Produce json
+	// @Success 200 {object} map[string]float64 "Average score"
+	// @Router /feedbacks/average-score [get]
+	app.Get("/feedbacks/average-score", func(c *fiber.Ctx) error {
+		ctx := context.TODO()
+
+		// MongoDB aggregation pipeline to calculate the average score
+		pipeline := mongo.Pipeline{
+			{
+				{"$group", bson.D{{"_id", nil}, {"averageScore", bson.D{{"$avg", "$score"}}}}},
+			},
+		}
+
+		cursor, err := mongoClient.Collection.Aggregate(ctx, pipeline)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Erreur de calcul de la moyenne"})
+		}
+		defer cursor.Close(ctx)
+
+		var result []bson.M
+		if err := cursor.All(ctx, &result); err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Erreur de décodage des résultats"})
+		}
+
+		if len(result) == 0 {
+			return c.JSON(fiber.Map{"average_score": 0})
+		}
+
+		averageScore, ok := result[0]["averageScore"].(float64)
+		if !ok {
+			return c.Status(500).JSON(fiber.Map{"error": "Erreur de conversion de la moyenne"})
+		}
+
+		return c.JSON(fiber.Map{"average_score": averageScore})
+	})
+
+	// Add Sentry to all routes
+	app.Use(sentryfiber.New(sentryfiber.Options{}))
+
+	// New route to generate an error
+	// @Summary Generate Error
+	// @Description This route generates a test error for Sentry.
+	// @Tags errors
+	// @Accept json
+	// @Produce json
+	// @Success 500 {object} map[string]string "Error message"
+	// @Router /generate-error [get]
+	app.Get("/generate-error", func(c *fiber.Ctx) error {
+		sentry.CaptureMessage("This is a test error captured by Sentry")
+		return c.Status(500).JSON(fiber.Map{"error": "This is a test error"})
 	})
 
 	// Démarrage du serveur Fiber
