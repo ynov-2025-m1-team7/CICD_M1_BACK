@@ -7,10 +7,11 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"time"
 
 	_ "cicd_m1_back/docs"
 
+	"github.com/getsentry/sentry-go"
+	sentryfiber "github.com/getsentry/sentry-go/fiber"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 
@@ -21,9 +22,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-
-	"github.com/getsentry/sentry-go"
-	sentryfiber "github.com/getsentry/sentry-go/fiber"
 )
 
 // fiber-swagger middleware
@@ -70,19 +68,6 @@ func main() {
 	}
 	defer mongoClient.Client.Disconnect(context.TODO())
 	log.Println("Connexion à MongoDB établie !")
-
-	// Initialize Sentry
-	err = sentry.Init(sentry.ClientOptions{
-		Dsn:              "https://8b79f7139ced081e4464099eceef1d11@o4509507230629888.ingest.de.sentry.io/4509507244523600",
-		TracesSampleRate: 1.0,
-	})
-	if err != nil {
-		log.Fatalf("sentry.Init: %s", err)
-	}
-	defer sentry.Flush(2 * time.Second)
-
-	// Add Sentry middleware to Fiber
-	app.Use(sentryfiber.New(sentryfiber.Options{}))
 
 	// @Summary Root Endpoint
 	// @Description Returns a welcome message for the API.
