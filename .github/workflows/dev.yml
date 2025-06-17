@@ -25,7 +25,7 @@ jobs:
     - name: Build and push Docker image
       run: |
         mkdir -p secrets
-        echo "${{ secrets.DB_PASSWORD_DEV }}" > secrets/db_password
+        echo "DB_PASSWORD_DEV = ${{ secrets.DB_PASSWORD_DEV }}" > secrets/.env
         docker build --build-arg DB_PASSWORD=${{ secrets.DB_PASSWORD_DEV }} -t djlopezz/cicdm1 .
         docker push djlopezz/cicdm1
     
