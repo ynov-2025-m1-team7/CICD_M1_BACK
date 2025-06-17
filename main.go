@@ -24,8 +24,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// fiber-swagger middleware
-
 type MongoClient struct {
 	Client     *mongo.Client
 	Collection *mongo.Collection
