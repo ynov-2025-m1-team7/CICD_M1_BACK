@@ -52,7 +52,7 @@ jobs:
         -d '{"event_type": "load-test-trigger"}'
 
     - name: Upload summary.json
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: load-test-summary
         path: summary.json
