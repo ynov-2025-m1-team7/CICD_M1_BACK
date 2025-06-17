@@ -15,7 +15,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 
-	// Import the generated Swagger docs
+	// Import the generated Swagger docss
 
 	swagger "github.com/arsmn/fiber-swagger/v2"
 	"go.mongodb.org/mongo-driver/bson"
