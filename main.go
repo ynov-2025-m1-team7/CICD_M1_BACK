@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 
+	"cicd_m1_back/config"
 	_ "cicd_m1_back/docs"
 
 	"github.com/getsentry/sentry-go"
@@ -53,6 +54,7 @@ func InitMongoDB(uri, dbName, collectionName string) (*MongoClient, error) {
 func main() {
 	app := fiber.New()
 	app.Get("/swagger/*", swagger.HandlerDefault)
+	api_url_sent := config.Config("API_URL_SENTIMENT")
 
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: "*",                           // Autorise toutes les origines
@@ -236,7 +238,7 @@ func main() {
 		}
 
 		payload, _ := json.Marshal(map[string]string{"text": text})
-		resp, err := http.Post("http://localhost:5000/analyze", "application/json", bytes.NewBuffer(payload))
+		resp, err := http.Post(api_url_sent+"/analyze", "application/json", bytes.NewBuffer(payload))
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "Erreur appel service sentiment"})
 		}
