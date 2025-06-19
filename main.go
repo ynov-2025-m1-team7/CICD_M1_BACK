@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"time"
 
+	"cicd_m1_back/config"
 	_ "cicd_m1_back/docs"
 
 	"github.com/gofiber/fiber/v2"
@@ -55,7 +56,7 @@ func InitMongoDB(uri, dbName, collectionName string) (*MongoClient, error) {
 	return &MongoClient{Client: client, Collection: collection}, nil
 }
 
-func setupRoutes(app *fiber.App, mongoClient *MongoClient) {
+func setupRoutes(app *fiber.App, mongoClient *MongoClient, api_url_sent string) {
 	// Root Endpoint
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("API de gestion des feedbacks")
@@ -177,7 +178,7 @@ func setupRoutes(app *fiber.App, mongoClient *MongoClient) {
 		}
 
 		payload, _ := json.Marshal(map[string]string{"text": text})
-		resp, err := http.Post("http://localhost:5000/analyze", "application/json", bytes.NewBuffer(payload))
+		resp, err := http.Post(api_url_sent, "application/json", bytes.NewBuffer(payload))
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "Erreur appel service sentiment"})
 		}
@@ -337,11 +338,14 @@ func main() {
 	}
 	defer sentry.Flush(2 * time.Second)
 
+	// Récupération de l'URL de l'API Python pour l'analyse de sentiment
+	api_url_sent := config.Config("API_URL_SENTIMENT")
+
 	// Setup middlewares
 	setupMiddlewares(app)
 
 	// Setup routes
-	setupRoutes(app, mongoClient)
+	setupRoutes(app, mongoClient, api_url_sent)
 
 	// Start the server
 	if err := app.Listen(":8080"); err != nil {
