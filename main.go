@@ -290,8 +290,9 @@ func setupRoutes(app *fiber.App, mongoClient *MongoClient, api_url_sent string) 
 func setupMiddlewares(app *fiber.App) {
 	// CORS Middleware
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
+		AllowOrigins: "http://localhost:8080, ${API_URL_SENTIMENT}, ${API_URL_FRONT}",
 		AllowMethods: "GET,POST,PUT,DELETE,OPTIONS",
+		AllowHeaders: "Content-Type, Authorization",
 	}))
 
 	// Sentry Middleware
