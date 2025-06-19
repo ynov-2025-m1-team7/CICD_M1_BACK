@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"time"
 
 	"cicd_m1_back/config"
 	_ "cicd_m1_back/docs"
@@ -68,6 +71,19 @@ func main() {
 	}
 	defer mongoClient.Client.Disconnect(context.TODO())
 	log.Println("Connexion à MongoDB établie !")
+
+	// Initialize Sentry
+	err = sentry.Init(sentry.ClientOptions{
+		Dsn:              "https://db0f0c26144b686782c222fddcd2665f@o4509507319103488.ingest.de.sentry.io/4509513579626576",
+		TracesSampleRate: 1.0,
+	})
+	if err != nil {
+		log.Fatalf("sentry.Init: %s", err)
+	}
+	defer sentry.Flush(2 * time.Second)
+
+	// Add Sentry middleware to Fiber
+	app.Use(sentryfiber.New(sentryfiber.Options{}))
 
 	// @Summary Root Endpoint
 	// @Description Returns a welcome message for the API.
@@ -361,6 +377,46 @@ func main() {
 	app.Get("/generate-error", func(c *fiber.Ctx) error {
 		sentry.CaptureMessage("This is a test error captured by Sentry")
 		return c.Status(500).JSON(fiber.Map{"error": "This is a test error"})
+	})
+
+	// Route pour générer une erreur non critique "foo"
+	// @Summary Generate Foo Error
+	// @Description This route generates a non-critical "foo" error.
+	// @Tags errors
+	// @Accept json
+	// @Produce json
+	// @Success 200 {object} map[string]string "Non-critical error message"
+	// @Router /foo-error [get]
+	app.Get("/foo", func(c *fiber.Ctx) error {
+		// Simuler une erreur non critique
+		err := errors.New("erreur non critique dans /foo")
+
+		// Capturer une erreur avec trace dans Sentry
+		sentry.WithScope(func(scope *sentry.Scope) {
+			scope.SetLevel(sentry.LevelWarning) // Pas critique
+			scope.SetTag("route", "/foo")
+			scope.SetExtra("details", map[string]string{
+				"info": "quelque chose de non critique mais utile à suivre",
+			})
+			sentry.CaptureException(err)
+		})
+
+		return c.SendString("foo route with non-critical error reported to Sentry")
+	})
+
+	// Middleware pour gérer les erreurs 404
+	app.Use(func(c *fiber.Ctx) error {
+		err := c.Next()
+		if c.Response().StatusCode() == fiber.StatusNotFound {
+			notFoundErr := fmt.Errorf("404 Error: Path %s not found", c.Path())
+			log.Println(notFoundErr)
+			sentry.CaptureException(notFoundErr) // Capture l'erreur comme une exception
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "Route not found",
+				"path":  c.Path(),
+			})
+		}
+		return err
 	})
 
 	// Démarrage du serveur Fiber
