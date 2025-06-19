@@ -287,11 +287,12 @@ func setupRoutes(app *fiber.App, mongoClient *MongoClient, api_url_sent string) 
 	})
 }
 
-func setupMiddlewares(app *fiber.App) {
+func setupMiddlewares(app *fiber.App, api_url_front string) {
 	// CORS Middleware
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
+		AllowOrigins: "http://localhost:8080," + api_url_front,
 		AllowMethods: "GET,POST,PUT,DELETE,OPTIONS",
+		AllowHeaders: "Content-Type, Authorization",
 	}))
 
 	// Sentry Middleware
@@ -337,9 +338,10 @@ func main() {
 
 	// Récupération de l'URL de l'API Python pour l'analyse de sentiment
 	api_url_sent := config.Config("API_URL_SENTIMENT")
+	api_url_front := config.Config("API_URL_FRONT")
 
 	// Setup middlewares
-	setupMiddlewares(app)
+	setupMiddlewares(app, api_url_front)
 
 	// Setup routes
 	setupRoutes(app, mongoClient, api_url_sent)
