@@ -117,3 +117,40 @@ jobs:
       with:
         name: test-results
         path: test-results.json
+    
+  coverage:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: 1.23
+
+    - name: Run coverage
+      run: |
+        go test -coverprofile=coverage.out ./...
+        go tool cover -func=coverage.out > coverage.txt
+
+    - name: Check test coverage
+      run: |
+        go test -coverprofile=coverage.out ./...
+        go tool cover -func=coverage.out > coverage.txt
+        total=$(go tool cover -func=coverage.out | grep total | awk '{print substr($3, 1, length($3)-1)}')
+        cov=${total%.*}
+        if [ "$cov" -lt 60 ]; then
+          echo "Test coverage is below 60% ($total%)"
+          exit 1
+        fi
+
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: |
+          coverage.out
+          coverage.txt
