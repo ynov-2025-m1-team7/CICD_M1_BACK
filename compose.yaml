@@ -13,6 +13,8 @@ services:
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PORT: ${DB_PORT}
+      API_URL_SENTIMENT: ${API_URL_SENTIMENT}
+      API_URL_FRONT: ${API_URL_FRONT}
     secrets:
       - db_password
 
