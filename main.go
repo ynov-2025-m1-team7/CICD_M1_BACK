@@ -238,7 +238,7 @@ func main() {
 		}
 
 		payload, _ := json.Marshal(map[string]string{"text": text})
-		resp, err := http.Post(api_url_sent+"/analyze", "application/json", bytes.NewBuffer(payload))
+		resp, err := http.Post(api_url_sent+"/analyze", "application/json", bytes.NewBuffer(payload)) // #14
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "Erreur appel service sentiment"})
 		}
